@@ -1,51 +1,136 @@
+/* ROLE: MessageInput — поле за въвеждане на съобщения + бутони за изпращане/спиране. */
+
 /**
- * MessageInput - Input field with Send/Stop buttons for user message entry.
- * Manages input state and handles form submission for sending messages.
+ * MessageInput - Input field and control buttons for sending messages and stopping streaming.
+ * Handles text input, Enter key submission, and streaming state management.
  */
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useChat } from '../hooks/useChat';
+import useRuntimeStore from '../state/runtimeStore';
+import { MAX_INPUT_LENGTH } from '../config/constants';
 
 const MessageInput = ({ onSend, onStop, isStreaming, disabled }) => {
   const [inputValue, setInputValue] = useState('');
+  const [error, setError] = useState('');
+  const textareaRef = useRef(null);
+  const { sendMessage } = useChat();
+  const { isStreaming: runtimeStreaming } = useRuntimeStore();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (inputValue.trim() && !disabled) {
-      onSend(inputValue.trim());
+  // Use runtime store streaming state if available, fallback to prop
+  const isCurrentlyStreaming = runtimeStreaming !== undefined ? runtimeStreaming : isStreaming;
+
+  const handleSubmit = async () => {
+    const trimmedText = inputValue.trim();
+    
+    // Validation
+    if (!trimmedText) {
+      setError('Please enter a message');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    
+    if (trimmedText.length > MAX_INPUT_LENGTH) {
+      setError(`Message too long (max ${MAX_INPUT_LENGTH} characters)`);
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    try {
+      // Clear any previous errors
+      setError('');
+      
+      // Send message through useChat hook
+      await sendMessage(trimmedText);
+      
+      // Clear input after successful send
       setInputValue('');
+      
+      // Focus back to input for next message
+      textareaRef.current?.focus();
+      
+    } catch (error) {
+      setError(error.message || 'Failed to send message');
+      setTimeout(() => setError(''), 3000);
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!isCurrentlyStreaming && !disabled) {
+        handleSubmit();
+      }
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setInputValue(e.target.value);
+    // Clear error when user starts typing
+    if (error) setError('');
+  };
+
+  const handleStopClick = () => {
+    if (onStop) {
+      onStop();
+    }
+  };
+
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [inputValue]);
+
   return (
-    <form className="message-input" onSubmit={handleSubmit}>
-      <input
-        type="text"
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        placeholder="Type your message..."
-        disabled={disabled}
+    <div className="message-input">
+      {/* Error Display */}
+      {error && (
+        <div className="message-input-error">
+          <span>⚠️ {error}</span>
+        </div>
+      )}
+      
+      {/* Input Field */}
+      <textarea
+        ref={textareaRef}
         className="message-input-field"
+        value={inputValue}
+        onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
+        placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
+        disabled={disabled || isCurrentlyStreaming}
+        rows={1}
+        maxLength={MAX_INPUT_LENGTH}
       />
+      
+      {/* Character Count */}
+      <div className="message-input-counter">
+        {inputValue.length}/{MAX_INPUT_LENGTH}
+      </div>
+      
+      {/* Control Buttons */}
       <div className="message-input-buttons">
-        {isStreaming ? (
+        {isCurrentlyStreaming ? (
           <button
-            type="button"
-            onClick={onStop}
             className="btn btn-stop"
+            onClick={handleStopClick}
             disabled={disabled}
           >
             Stop
           </button>
         ) : (
           <button
-            type="submit"
             className="btn btn-send"
-            disabled={disabled || !inputValue.trim()}
+            onClick={handleSubmit}
+            disabled={disabled || !inputValue.trim() || inputValue.length > MAX_INPUT_LENGTH}
           >
             Send
           </button>
         )}
       </div>
-    </form>
+    </div>
   );
 };
 

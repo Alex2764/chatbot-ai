@@ -1,114 +1,181 @@
-/* ROLE: toolValidators — строга валидация на аргументи за всеки инструмент; връща контролируеми грешки и никога не изпълнява UI действия. */
+/* ROLE: toolValidators — проверка на аргументи по функция. */
 
 /**
- * ToolValidators - Validates tool arguments using registered validators or schema validation.
- * Provides custom validation logic for each tool type with fallback schema validation.
+ * ToolValidators - Provides validation logic for tool arguments and execution policies.
+ * Ensures tool calls are safe and arguments meet requirements before execution.
  */
 class ToolValidators {
   constructor() {
     this.validators = new Map();
+    this.initializeValidators();
   }
 
-  // Register a validator for a specific tool
+  initializeValidators() {
+    // Get current time validator
+    this.validators.set('get_current_time', (args) => {
+      if (Object.keys(args).length > 0) {
+        return { valid: false, error: 'get_current_time takes no arguments' };
+      }
+      return { valid: true };
+    });
+
+    // Calculate validator
+    this.validators.set('calculate', (args) => {
+      if (!args.expression || typeof args.expression !== 'string') {
+        return { valid: false, error: 'expression must be a string' };
+      }
+      
+      if (args.expression.length > 100) {
+        return { valid: false, error: 'expression too long (max 100 characters)' };
+      }
+      
+      // Check for potentially dangerous patterns
+      const dangerousPatterns = [
+        /eval\s*\(/i,
+        /Function\s*\(/i,
+        /setTimeout\s*\(/i,
+        /setInterval\s*\(/i,
+        /document\./i,
+        /window\./i,
+        /localStorage\./i,
+        /sessionStorage\./i
+      ];
+      
+      for (const pattern of dangerousPatterns) {
+        if (pattern.test(args.expression)) {
+          return { valid: false, error: 'expression contains forbidden patterns' };
+        }
+      }
+      
+      return { valid: true };
+    });
+
+    // Save note validator
+    this.validators.set('save_note', (args) => {
+      if (!args.title || typeof args.title !== 'string') {
+        return { valid: false, error: 'title must be a string' };
+      }
+      
+      if (!args.content || typeof args.content !== 'string') {
+        return { valid: false, error: 'content must be a string' };
+      }
+      
+      if (args.title.trim().length === 0) {
+        return { valid: false, error: 'title cannot be empty' };
+      }
+      
+      if (args.content.trim().length === 0) {
+        return { valid: false, error: 'content cannot be empty' };
+      }
+      
+      if (args.title.length > 200) {
+        return { valid: false, error: 'title too long (max 200 characters)' };
+      }
+      
+      if (args.content.length > 5000) {
+        return { valid: false, error: 'content too long (max 5000 characters)' };
+      }
+      
+      return { valid: true };
+    });
+
+    // Read note validator
+    this.validators.set('read_note', (args) => {
+      if (args.title !== undefined && typeof args.title !== 'string') {
+        return { valid: false, error: 'title must be a string if provided' };
+      }
+      
+      if (args.title && args.title.length > 200) {
+        return { valid: false, error: 'title too long (max 200 characters)' };
+      }
+      
+      return { valid: true };
+    });
+
+    // Open UI validator
+    this.validators.set('open_ui', (args) => {
+      if (!args.component || typeof args.component !== 'string') {
+        return { valid: false, error: 'component must be a string' };
+      }
+      
+      const allowedComponents = ['settings', 'help', 'notes', 'about'];
+      if (!allowedComponents.includes(args.component)) {
+        return { valid: false, error: `component must be one of: ${allowedComponents.join(', ')}` };
+      }
+      
+      if (args.data !== undefined && typeof args.data !== 'object') {
+        return { valid: false, error: 'data must be an object if provided' };
+      }
+      
+      return { valid: true };
+    });
+  }
+
   registerValidator(toolName, validator) {
     this.validators.set(toolName, validator);
   }
 
-  // Get validator for a specific tool
+  validateToolCall(toolName, args) {
+    const validator = this.validators.get(toolName);
+    
+    if (!validator) {
+      return { valid: false, error: `No validator found for tool: ${toolName}` };
+    }
+    
+    try {
+      return validator(args);
+    } catch (error) {
+      return { valid: false, error: `Validation error: ${error.message}` };
+    }
+  }
+
+  validateBySchema(toolName, args, schema) {
+    // Basic schema validation as fallback
+    if (!schema || !schema.properties) {
+      return { valid: true }; // No schema, assume valid
+    }
+    
+    const required = schema.required || [];
+    
+    // Check required properties
+    for (const prop of required) {
+      if (args[prop] === undefined) {
+        return { valid: false, error: `Missing required property: ${prop}` };
+      }
+    }
+    
+    // Check property types (basic validation)
+    for (const [prop, value] of Object.entries(args)) {
+      const propSchema = schema.properties[prop];
+      if (propSchema && propSchema.type) {
+        if (propSchema.type === 'string' && typeof value !== 'string') {
+          return { valid: false, error: `Property ${prop} must be a string` };
+        }
+        if (propSchema.type === 'number' && typeof value !== 'number') {
+          return { valid: false, error: `Property ${prop} must be a number` };
+        }
+        if (propSchema.type === 'boolean' && typeof value !== 'boolean') {
+          return { valid: false, error: `Property ${prop} must be a boolean` };
+        }
+      }
+    }
+    
+    return { valid: true };
+  }
+
   getValidator(toolName) {
     return this.validators.get(toolName);
   }
 
-  // Validate tool arguments using registered validator or schema
-  validateToolCall(toolName, args) {
-    const validator = this.getValidator(toolName);
-    
-    if (validator) {
-      return validator(args);
-    }
-
-    // Fallback to schema validation
-    return this.validateBySchema(toolName, args);
+  hasValidator(toolName) {
+    return this.validators.has(toolName);
   }
 
-  // Validate by schema (fallback method)
-  validateBySchema(toolName, args) {
-    // This would typically use a JSON schema validator
-    // For now, we'll do basic validation
-    try {
-      if (typeof args !== 'object' || args === null) {
-        return { isValid: false, errors: ['Arguments must be an object'] };
-      }
-
-      // Basic validation - in a real app, you'd use a proper schema validator
-      return { isValid: true, errors: [] };
-    } catch (error) {
-      return { isValid: false, errors: [error.message] };
-    }
-  }
-
-  // Custom validators for specific tools
-  validateGetCurrentTime(args) {
-    if (args.format && !['iso', 'human', 'timestamp'].includes(args.format)) {
-      return { isValid: false, errors: ['Invalid format. Must be iso, human, or timestamp'] };
-    }
-    return { isValid: true, errors: [] };
-  }
-
-  validateCalculate(args) {
-    if (!args.expression || typeof args.expression !== 'string') {
-      return { isValid: false, errors: ['Expression must be a string'] };
-    }
-    
-    // Basic expression validation
-    const validChars = /^[0-9+\-*/().\s]+$/;
-    if (!validChars.test(args.expression)) {
-      return { isValid: false, errors: ['Expression contains invalid characters'] };
-    }
-    
-    return { isValid: true, errors: [] };
-  }
-
-  validateSaveNote(args) {
-    if (!args.title || typeof args.title !== 'string' || args.title.trim().length === 0) {
-      return { isValid: false, errors: ['Title must be a non-empty string'] };
-    }
-    
-    if (!args.content || typeof args.content !== 'string') {
-      return { isValid: false, errors: ['Content must be a string'] };
-    }
-    
-    return { isValid: true, errors: [] };
-  }
-
-  validateReadNote(args) {
-    if (!args.title || typeof args.title !== 'string' || args.title.trim().length === 0) {
-      return { isValid: false, errors: ['Title must be a non-empty string'] };
-    }
-    
-    return { isValid: true, errors: [] };
-  }
-
-  validateOpenUI(args) {
-    if (!args.component || !['settings', 'help', 'about'].includes(args.component)) {
-      return { isValid: false, errors: ['Component must be settings, help, or about'] };
-    }
-    
-    return { isValid: true, errors: [] };
-  }
-
-  // Initialize default validators
-  initializeDefaultValidators() {
-    this.registerValidator('get_current_time', this.validateGetCurrentTime.bind(this));
-    this.registerValidator('calculate', this.validateCalculate.bind(this));
-    this.registerValidator('save_note', this.validateSaveNote.bind(this));
-    this.registerValidator('read_note', this.validateReadNote.bind(this));
-    this.registerValidator('open_ui', this.validateOpenUI.bind(this));
+  listValidators() {
+    return Array.from(this.validators.keys());
   }
 }
 
-// Initialize default validators
-const toolValidators = new ToolValidators();
-toolValidators.initializeDefaultValidators();
-
-export default toolValidators;
+// Export singleton instance
+export const toolValidators = new ToolValidators();
+export default ToolValidators;

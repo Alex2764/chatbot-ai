@@ -28,9 +28,13 @@ import MessageInput from './MessageInput';
 import TypingIndicator from './TypingIndicator';
 import SettingsPanel from './SettingsPanel';
 import { useChat } from '../hooks/useChat';
+import useRuntimeStore from '../state/runtimeStore';
+import useMessagesStore from '../state/messagesStore';
 
 const ChatLayout = () => {
-  const { messages, isStreaming, sendMessage, stopMessage } = useChat();
+  const { sendMessage, stopMessage } = useChat();
+  const { messages } = useMessagesStore();
+  const { isStreaming } = useRuntimeStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const handleSendMessage = (content) => {

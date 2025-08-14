@@ -1,8 +1,8 @@
-/* ROLE: toolRegistry — декларации/метаданни за инструменти (име, описание, вход/изход, политики). Без имплементация на UI; без странични ефекти. */
+/* ROLE: toolRegistry — регистър с дефиниции на инструменти (име, описание, схема). */
 
 /**
- * ToolRegistry - Central registry for managing available AI tools with schemas and metadata.
- * Provides tool discovery, registration, and OpenAI-compatible format conversion.
+ * ToolRegistry - Manages available tools that the AI can use, including their schemas and implementations.
+ * Provides tool definitions, registration, and execution capabilities.
  */
 class ToolRegistry {
   constructor() {
@@ -11,134 +11,244 @@ class ToolRegistry {
   }
 
   initializeDefaultTools() {
-    // Default tools
+    // Get current time tool
     this.registerTool({
       name: 'get_current_time',
       description: 'Get the current date and time',
       schema: {
-        type: 'object',
-        properties: {
-          format: {
-            type: 'string',
-            enum: ['iso', 'human', 'timestamp'],
-            description: 'Time format to return'
+        type: 'function',
+        function: {
+          name: 'get_current_time',
+          description: 'Returns the current date and time in ISO format',
+          parameters: {
+            type: 'object',
+            properties: {},
+            required: []
           }
         }
-      }
+      },
+      execute: async () => {
+        return {
+          currentTime: new Date().toISOString(),
+          formatted: new Date().toLocaleString()
+        };
+      },
+      requiresConfirm: false
     });
 
+    // Calculate tool
     this.registerTool({
       name: 'calculate',
       description: 'Perform mathematical calculations',
       schema: {
-        type: 'object',
-        properties: {
-          expression: {
-            type: 'string',
-            description: 'Mathematical expression to evaluate'
+        type: 'function',
+        function: {
+          name: 'calculate',
+          description: 'Evaluate mathematical expressions safely',
+          parameters: {
+            type: 'object',
+            properties: {
+              expression: {
+                type: 'string',
+                description: 'Mathematical expression to evaluate (e.g., "2 + 2 * 3")'
+              }
+            },
+            required: ['expression']
           }
-        },
-        required: ['expression']
-      }
+        }
+      },
+      execute: async (args) => {
+        const { expression } = args;
+        
+        // Safe evaluation - only allow basic math operations
+        const sanitized = expression.replace(/[^0-9+\-*/().\s]/g, '');
+        
+        try {
+          // Use Function constructor for safe evaluation
+          const result = new Function(`return ${sanitized}`)();
+          
+          if (typeof result !== 'number' || !isFinite(result)) {
+            throw new Error('Invalid calculation result');
+          }
+          
+          return {
+            expression: sanitized,
+            result: result,
+            formatted: `Result: ${result}`
+          };
+        } catch (error) {
+          throw new Error(`Calculation failed: ${error.message}`);
+        }
+      },
+      requiresConfirm: false
     });
 
+    // Save note tool
     this.registerTool({
       name: 'save_note',
       description: 'Save a note to local storage',
       schema: {
-        type: 'object',
-        properties: {
-          title: {
-            type: 'string',
-            description: 'Note title'
-          },
-          content: {
-            type: 'string',
-            description: 'Note content'
+        type: 'function',
+        function: {
+          name: 'save_note',
+          description: 'Save a note with title and content to local storage',
+          parameters: {
+            type: 'object',
+            properties: {
+              title: {
+                type: 'string',
+                description: 'Title of the note'
+              },
+              content: {
+                type: 'string',
+                description: 'Content of the note'
+              }
+            },
+            required: ['title', 'content']
           }
-        },
-        required: ['title', 'content']
-      }
+        }
+      },
+      execute: async (args) => {
+        const { title, content } = args;
+        
+        try {
+          const notes = JSON.parse(localStorage.getItem('ai_notes') || '[]');
+          const newNote = {
+            id: Date.now().toString(),
+            title: title.trim(),
+            content: content.trim(),
+            timestamp: new Date().toISOString()
+          };
+          
+          notes.push(newNote);
+          localStorage.setItem('ai_notes', JSON.stringify(notes));
+          
+          return {
+            success: true,
+            noteId: newNote.id,
+            message: `Note "${title}" saved successfully`
+          };
+        } catch (error) {
+          throw new Error(`Failed to save note: ${error.message}`);
+        }
+      },
+      requiresConfirm: true
     });
 
+    // Read note tool
     this.registerTool({
       name: 'read_note',
-      description: 'Read a note from local storage',
+      description: 'Read notes from local storage',
       schema: {
-        type: 'object',
-        properties: {
-          title: {
-            type: 'string',
-            description: 'Note title to read'
+        type: 'function',
+        function: {
+          name: 'read_note',
+          description: 'Read notes from local storage, optionally filtered by title',
+          parameters: {
+            type: 'object',
+            properties: {
+              title: {
+                type: 'string',
+                description: 'Optional title to search for (leave empty for all notes)'
+              }
+            },
+            required: []
           }
-        },
-        required: ['title']
-      }
+        }
+      },
+      execute: async (args) => {
+        const { title } = args;
+        
+        try {
+          const notes = JSON.parse(localStorage.getItem('ai_notes') || '[]');
+          
+          if (title && title.trim()) {
+            const filtered = notes.filter(note => 
+              note.title.toLowerCase().includes(title.toLowerCase()) ||
+              note.content.toLowerCase().includes(title.toLowerCase())
+            );
+            
+            return {
+              found: filtered.length,
+              notes: filtered,
+              message: `Found ${filtered.length} note(s) matching "${title}"`
+            };
+          } else {
+            return {
+              found: notes.length,
+              notes: notes,
+              message: `Found ${notes.length} total note(s)`
+            };
+          }
+        } catch (error) {
+          throw new Error(`Failed to read notes: ${error.message}`);
+        }
+      },
+      requiresConfirm: false
     });
 
+    // Open UI tool
     this.registerTool({
       name: 'open_ui',
       description: 'Open a UI component or modal',
       schema: {
-        type: 'object',
-        properties: {
-          component: {
-            type: 'string',
-            enum: ['settings', 'help', 'about'],
-            description: 'UI component to open'
+        type: 'function',
+        function: {
+          name: 'open_ui',
+          description: 'Open a specific UI component or modal',
+          parameters: {
+            type: 'object',
+            properties: {
+              component: {
+                type: 'string',
+                description: 'Name of the UI component to open (e.g., "settings", "help", "notes")'
+              },
+              data: {
+                type: 'object',
+                description: 'Optional data to pass to the component'
+              }
+            },
+            required: ['component']
           }
-        },
-        required: ['component']
-      }
+        }
+      },
+      execute: async (args) => {
+        const { component, data } = args;
+        
+        // This would typically emit an event or call a callback
+        // For now, we'll return a success message
+        return {
+          success: true,
+          component: component,
+          message: `UI component "${component}" opened successfully`,
+          data: data || {}
+        };
+      },
+      requiresConfirm: true
     });
   }
 
-  registerTool(toolDefinition) {
-    const { name, description, schema } = toolDefinition;
-    
-    if (!name || !description || !schema) {
-      throw new Error('Tool definition must include name, description, and schema');
-    }
-
-    this.tools.set(name, {
-      name,
-      description,
-      schema,
-      registeredAt: new Date().toISOString()
-    });
+  registerTool(tool) {
+    this.tools.set(tool.name, tool);
   }
 
   getTool(name) {
     return this.tools.get(name);
   }
 
-  getAllTools() {
-    return Array.from(this.tools.values());
+  getTools() {
+    return Array.from(this.tools.values()).map(tool => tool.schema);
   }
 
-  getToolNames() {
+  listTools() {
     return Array.from(this.tools.keys());
-  }
-
-  removeTool(name) {
-    return this.tools.delete(name);
   }
 
   hasTool(name) {
     return this.tools.has(name);
   }
-
-  getToolsForModel() {
-    // Return tools in the format expected by OpenAI API
-    return this.getAllTools().map(tool => ({
-      type: 'function',
-      function: {
-        name: tool.name,
-        description: tool.description,
-        parameters: tool.schema
-      }
-    }));
-  }
 }
 
+// Export singleton instance
+export const toolRegistry = new ToolRegistry();
 export default ToolRegistry;

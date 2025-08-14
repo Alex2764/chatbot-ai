@@ -116,11 +116,28 @@
 /* Message Input */
 .message-input {
   display: flex;
+  flex-direction: column;
   gap: clamp(var(--spacing-sm), 2vw, var(--spacing-md));
   padding: clamp(var(--spacing-sm), 2vw, var(--spacing-md));
   border-top: 1px solid var(--color-border);
   background-color: var(--color-bg-primary);
-  flex-wrap: wrap;
+}
+
+.message-input-error {
+  background-color: var(--color-error);
+  color: var(--color-text-inverse);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  animation: error-slide-in 0.3s ease-out;
+}
+
+.message-input-counter {
+  align-self: flex-end;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: calc(-1 * var(--spacing-xs));
 }
 
 .message-input-field {
@@ -132,6 +149,10 @@
   font-size: clamp(var(--font-size-sm), 2.5vw, var(--font-size-base));
   line-height: var(--line-height-normal);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  resize: vertical;
+  min-height: 44px;
+  max-height: 200px;
+  font-family: inherit;
 }
 
 .message-input-field:focus {
@@ -150,6 +171,7 @@
   display: flex;
   gap: var(--spacing-sm);
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 /* Buttons */
@@ -807,5 +829,16 @@
   .confirm-dialog-actions .btn {
     width: 100%;
     min-width: unset;
+  }
+}
+
+@keyframes error-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

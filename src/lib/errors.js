@@ -1,142 +1,181 @@
-/* ROLE: errors — мап от кодове към човешки съобщения/насоки. Без бизнес и UI логика. */
+/* ROLE: errors.js — централизирана система за съобщения за грешки, кодове и AppError клас за консистентна обработка на грешки. */
 
 /**
- * Error handling utilities with human-readable message mapping and consistent error classes.
- * Provides error codes, user-friendly messages, and error reporting capabilities.
+ * Centralized error handling system with human-readable messages and structured responses.
+ * Maps HTTP status codes to user-friendly error messages without exposing sensitive information.
  */
-// Error mapping for human-readable messages
-export const ERROR_MESSAGES = {
-  // API Errors
-  'API_KEY_MISSING': 'Please enter your OpenAI API key in settings',
-  'API_KEY_INVALID': 'Your API key appears to be invalid. Please check and try again',
-  'API_RATE_LIMIT': 'Rate limit exceeded. Please wait a moment before trying again',
-  'API_QUOTA_EXCEEDED': 'You have exceeded your API quota. Please check your OpenAI account',
-  'API_SERVER_ERROR': 'OpenAI servers are experiencing issues. Please try again later',
-  'API_TIMEOUT': 'Request timed out. Please check your internet connection and try again',
+
+// HTTP Error Code Mappings
+export const HTTP_ERROR_MESSAGES = {
+  // Authentication & Authorization
+  401: 'Невалиден ключ или липсват права (провери API ключа/организацията).',
+  403: 'Невалиден ключ или липсват права (провери API ключа/организацията).',
   
-  // Network Errors
-  'NETWORK_ERROR': 'Network connection failed. Please check your internet connection',
-  'NETWORK_TIMEOUT': 'Request timed out. Please try again',
-  'NETWORK_OFFLINE': 'You appear to be offline. Please check your internet connection',
+  // Not Found
+  404: 'Грешен endpoint/път (вероятно опит към локален /api/... без бекенд).',
   
-  // Validation Errors
-  'INVALID_INPUT': 'Please check your input and try again',
-  'MESSAGE_TOO_LONG': 'Message is too long. Please shorten it and try again',
-  'EMPTY_MESSAGE': 'Please enter a message before sending',
+  // Rate Limiting & Quota
+  429: 'Изчерпана квота/билинг (влез в OpenAI billing и зареди средства).',
   
-  // Tool Errors
-  'TOOL_NOT_FOUND': 'The requested tool is not available',
-  'TOOL_VALIDATION_FAILED': 'Tool arguments are invalid. Please check the input',
-  'TOOL_EXECUTION_FAILED': 'Tool execution failed. Please try again',
+  // Server Errors
+  500: 'Проблем при доставчика или мрежата — опитай пак.',
+  502: 'Проблем при доставчика или мрежата — опитай пак.',
+  503: 'Проблем при доставчика или мрежата — опитай пак.',
+  504: 'Проблем при доставчика или мрежата — опитай пак.',
   
-  // Storage Errors
-  'STORAGE_QUOTA_EXCEEDED': 'Storage quota exceeded. Some data may not be saved',
-  'STORAGE_ACCESS_DENIED': 'Cannot access local storage. Please check your browser settings',
+  // Network & Timeout
+  'NETWORK_ERROR': 'Проблем при доставчика или мрежата — опитай пак.',
+  'TIMEOUT_ERROR': 'Проблем при доставчика или мрежата — опитай пак.',
   
-  // General Errors
-  'UNKNOWN_ERROR': 'An unexpected error occurred. Please try again',
-  'PERMISSION_DENIED': 'Permission denied. Please check your settings',
-  'RESOURCE_NOT_FOUND': 'The requested resource was not found',
-  'OPERATION_FAILED': 'Operation failed. Please try again'
+  // Generic
+  'UNKNOWN_ERROR': 'Неочаквана грешка — опитай отново.'
 };
 
-// Error code mapping
-export const ERROR_CODES = {
-  'MISSING_API_KEY': 'API_KEY_MISSING',
-  'INVALID_API_KEY': 'API_KEY_INVALID',
-  'RATE_LIMIT_EXCEEDED': 'API_RATE_LIMIT',
-  'QUOTA_EXCEEDED': 'API_QUOTA_EXCEEDED',
-  'INTERNAL_SERVER_ERROR': 'API_SERVER_ERROR',
-  'REQUEST_TIMEOUT': 'API_TIMEOUT',
-  'NETWORK_ERROR': 'NETWORK_ERROR',
-  'TIMEOUT': 'NETWORK_TIMEOUT',
-  'OFFLINE': 'NETWORK_OFFLINE',
-  'VALIDATION_ERROR': 'INVALID_INPUT',
-  'MESSAGE_LENGTH_EXCEEDED': 'MESSAGE_TOO_LONG',
-  'EMPTY_CONTENT': 'EMPTY_MESSAGE',
-  'TOOL_NOT_FOUND': 'TOOL_NOT_FOUND',
-  'VALIDATION_FAILED': 'TOOL_VALIDATION_FAILED',
-  'EXECUTION_FAILED': 'TOOL_EXECUTION_FAILED',
-  'QUOTA_EXCEEDED': 'STORAGE_QUOTA_EXCEEDED',
-  'ACCESS_DENIED': 'STORAGE_ACCESS_DENIED',
-  'UNKNOWN': 'UNKNOWN_ERROR',
-  'PERMISSION_DENIED': 'PERMISSION_DENIED',
-  'NOT_FOUND': 'RESOURCE_NOT_FOUND',
-  'OPERATION_FAILED': 'OPERATION_FAILED'
+// Error Categories
+export const ERROR_CATEGORIES = {
+  AUTHENTICATION: [401, 403],
+  NOT_FOUND: [404],
+  QUOTA_LIMIT: [429],
+  SERVER_ERROR: [500, 502, 503, 504],
+  NETWORK: ['NETWORK_ERROR', 'TIMEOUT_ERROR']
 };
 
-// Get human-readable error message
-export const getErrorMessage = (errorCode, fallbackMessage = 'An error occurred') => {
-  const mappedCode = ERROR_CODES[errorCode] || errorCode;
-  return ERROR_MESSAGES[mappedCode] || fallbackMessage;
-};
-
-// Error class for consistent error handling
+// Custom Error Class
 export class AppError extends Error {
-  constructor(code, message, details = null) {
-    super(message || getErrorMessage(code));
+  constructor(message, code, category = 'UNKNOWN', details = null) {
+    super(message);
     this.name = 'AppError';
     this.code = code;
+    this.category = category;
     this.details = details;
     this.timestamp = new Date().toISOString();
   }
 
-  getHumanMessage() {
-    return getErrorMessage(this.code, this.message);
-  }
-
   toJSON() {
     return {
-      code: this.code,
       message: this.message,
-      humanMessage: this.getHumanMessage(),
-      details: this.details,
-      timestamp: this.timestamp
+      code: this.code,
+      category: this.category,
+      timestamp: this.timestamp,
+      details: this.details
     };
   }
 }
 
-// Error handler utility
-export const handleError = (error, context = '') => {
-  console.error(`Error in ${context}:`, error);
+// HTTP Error Handler
+export function handleHttpError(statusCode, responseText = '') {
+  const humanMessage = HTTP_ERROR_MESSAGES[statusCode] || HTTP_ERROR_MESSAGES['UNKNOWN_ERROR'];
   
-  if (error instanceof AppError) {
-    return error.getHumanMessage();
+  let category = 'UNKNOWN';
+  if (ERROR_CATEGORIES.AUTHENTICATION.includes(statusCode)) {
+    category = 'AUTHENTICATION';
+  } else if (ERROR_CATEGORIES.NOT_FOUND.includes(statusCode)) {
+    category = 'NOT_FOUND';
+  } else if (ERROR_CATEGORIES.QUOTA_LIMIT.includes(statusCode)) {
+    category = 'QUOTA_LIMIT';
+  } else if (ERROR_CATEGORIES.SERVER_ERROR.includes(statusCode)) {
+    category = 'SERVER_ERROR';
   }
-  
-  // Handle different error types
-  if (error.name === 'AbortError') {
-    return 'Operation was cancelled';
-  }
-  
-  if (error.name === 'TypeError') {
-    return 'Invalid operation. Please try again';
-  }
-  
-  if (error.name === 'ReferenceError') {
-    return 'System error. Please refresh the page and try again';
-  }
-  
-  return getErrorMessage('UNKNOWN_ERROR');
-};
 
-// Error reporting utility
-export const reportError = (error, context = '', userInfo = {}) => {
-  const errorReport = {
-    error: error instanceof AppError ? error.toJSON() : {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
-    },
-    context,
-    userInfo,
-    timestamp: new Date().toISOString(),
-    userAgent: navigator.userAgent,
-    url: window.location.href
+  return {
+    success: false,
+    code: statusCode,
+    category,
+    message: humanMessage,
+    humanMessage,
+    timestamp: new Date().toISOString()
   };
+}
+
+// Network Error Handler
+export function handleNetworkError(error) {
+  let category = 'NETWORK';
+  let message = HTTP_ERROR_MESSAGES['NETWORK_ERROR'];
   
-  // In a real app, you'd send this to an error reporting service
-  console.error('Error Report:', errorReport);
+  if (error.name === 'TypeError' && error.message.includes('fetch')) {
+    category = 'NETWORK';
+    message = 'Проблем с мрежата — провери интернет връзката.';
+  } else if (error.name === 'AbortError') {
+    category = 'TIMEOUT';
+    message = 'Заявката е прекъсната — опитай отново.';
+  }
+
+  return {
+    success: false,
+    code: 'NETWORK_ERROR',
+    category,
+    message,
+    humanMessage: message,
+    timestamp: new Date().toISOString()
+  };
+}
+
+// OpenAI API Error Handler
+export function handleOpenAIError(error) {
+  // Extract status code from error message if available
+  const statusMatch = error.message.match(/OpenAI API error: (\d+)/);
+  if (statusMatch) {
+    const statusCode = parseInt(statusMatch[1]);
+    return handleHttpError(statusCode, error.message);
+  }
+
+  // Handle network errors
+  if (error.name === 'TypeError' || error.message.includes('fetch')) {
+    return handleNetworkError(error);
+  }
+
+  // Generic error
+  return {
+    success: false,
+    code: 'UNKNOWN_ERROR',
+    category: 'UNKNOWN',
+    message: error.message,
+    humanMessage: HTTP_ERROR_MESSAGES['UNKNOWN_ERROR'],
+    timestamp: new Date().toISOString()
+  };
+}
+
+// Error Reporter (for future analytics)
+export function reportError(error, context = {}) {
+  // Don't log sensitive information like API keys
+  const safeError = {
+    message: error.message,
+    code: error.code || 'UNKNOWN',
+    category: error.category || 'UNKNOWN',
+    timestamp: error.timestamp || new Date().toISOString(),
+    context: {
+      ...context,
+      // Remove any potentially sensitive data
+      apiKey: '[REDACTED]',
+      headers: context.headers ? '[REDACTED]' : undefined
+    }
+  };
+
+  console.error('Error reported:', safeError);
   
-  return errorReport;
-};
+  // In production, this could send to error tracking service
+  // but never log API keys or sensitive data
+}
+
+// Success Response Helper
+export function createSuccessResponse(data, message = 'Success') {
+  return {
+    success: true,
+    data,
+    message,
+    timestamp: new Date().toISOString()
+  };
+}
+
+// Validation Error Helper
+export function createValidationError(field, message) {
+  return {
+    success: false,
+    code: 'VALIDATION_ERROR',
+    category: 'VALIDATION',
+    message: `Validation failed for ${field}: ${message}`,
+    humanMessage: message,
+    field,
+    timestamp: new Date().toISOString()
+  };
+}

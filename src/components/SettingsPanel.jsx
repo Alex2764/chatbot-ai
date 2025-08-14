@@ -73,21 +73,34 @@ const SettingsPanel = ({ isOpen, onClose }) => {
       const client = new OpenAIClient(localApiKey);
       const result = await client.ping();
       
-      // Convert technical messages to user-friendly ones
-      let userMessage = result.message;
-      if (result.message === 'Key OK') {
-        userMessage = '✅ API key is valid and working!';
-      } else if (result.message === 'Invalid key') {
-        userMessage = '❌ Invalid API key. Please check and try again.';
-      } else if (result.message === 'Network error') {
-        userMessage = '🌐 Network connection issue. Please check your internet.';
+      if (result.success) {
+        setTestResult({ success: true, message: '✅ API key is valid and working!' });
+      } else {
+        // Handle structured error responses
+        let userMessage = result.humanMessage || result.message;
+        
+        // Map specific error codes to user-friendly messages
+        if (result.code === 429) {
+          userMessage = '💰 Квотата е изчерпана / проверѝ billing';
+        } else if (result.code === 401 || result.code === 403) {
+          userMessage = '🔑 Провери API ключа/правата';
+        } else if (result.code === 404) {
+          userMessage = '🌐 Настрой endpoint (не използвай /api/... без бекенд)';
+        } else if (result.category === 'QUOTA_LIMIT') {
+          userMessage = '💰 Квотата е изчерпана / проверѝ billing';
+        } else if (result.category === 'AUTHENTICATION') {
+          userMessage = '🔑 Провери API ключа/правата';
+        } else if (result.category === 'NOT_FOUND') {
+          userMessage = '🌐 Настрой endpoint (не използвай /api/... без бекенд)';
+        }
+        
+        setTestResult({ success: false, message: userMessage });
       }
-      
-      setTestResult({ success: result.success, message: userMessage });
       
       // Auto-hide the result after 3 seconds
       setTimeout(() => setTestResult(null), 3000);
     } catch (error) {
+      // Fallback error handling
       setTestResult({ success: false, message: '🌐 Network connection issue. Please check your internet.' });
       setTimeout(() => setTestResult(null), 3000);
     }
