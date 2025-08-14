@@ -1,0 +1,143 @@
+/**
+ * JSDoc type definitions for tool execution, validation, and management interfaces.
+ * Defines Tool, ToolCall, ToolResult, and related tooling structures.
+ */
+/**
+ * @typedef {Object} Tool
+ * @description Definition of a tool that can be called by the AI
+ * @property {string} name - Unique name identifier for the tool
+ * @property {string} description - Human-readable description of what the tool does
+ * @property {Object} schema - JSON Schema defining the tool's parameters
+ * @property {string} schema.type - Type of the schema (usually 'object')
+ * @property {Object} schema.properties - Properties/parameters for the tool
+ * @property {string[]} [schema.required] - Array of required property names
+ * @property {string} [version] - Version of the tool
+ * @property {string} [category] - Category the tool belongs to
+ * @property {boolean} [enabled] - Whether the tool is currently enabled
+ * @property {string} [registeredAt] - ISO timestamp when tool was registered
+ */
+
+/**
+ * @typedef {Object} ToolCall
+ * @description A request to execute a specific tool
+ * @property {string} id - Unique identifier for this tool call
+ * @property {string} name - Name of the tool to call
+ * @property {Object} arguments - Arguments to pass to the tool
+ * @property {string} [status] - Current status: 'pending', 'executing', 'completed', 'failed'
+ * @property {Object} [result] - Result from tool execution
+ * @property {string} [error] - Error message if execution failed
+ * @property {number} [executionTime] - Time taken to execute the tool
+ * @property {string} [requestedAt] - ISO timestamp when tool call was requested
+ * @property {string} [completedAt] - ISO timestamp when tool call completed
+ * @property {string} [messageId] - ID of the message that triggered this tool call
+ */
+
+/**
+ * @typedef {Object} ToolResult
+ * @description Result from executing a tool
+ * @property {string} toolCallId - ID of the corresponding tool call
+ * @property {string} toolName - Name of the tool that was executed
+ * @property {*} result - Result data from the tool execution
+ * @property {string} [error] - Error message if execution failed
+ * @property {number} executionTime - Time taken to execute the tool in milliseconds
+ * @property {Object} [metadata] - Additional metadata about the execution
+ * @property {string} [metadata.executionId] - Unique execution identifier
+ * @property {string} [metadata.userId] - User who triggered the execution
+ * @property {Object} [metadata.environment] - Environment information
+ * @property {string} completedAt - ISO timestamp when execution completed
+ */
+
+/**
+ * @typedef {Object} ToolExecutionContext
+ * @description Context information for tool execution
+ * @property {string} executionId - Unique identifier for this execution
+ * @property {string} userId - ID of the user requesting the execution
+ * @property {string} sessionId - Current session identifier
+ * @property {string} conversationId - Current conversation identifier
+ * @property {Object} userPreferences - User preferences and settings
+ * @property {Object} environment - Environment information (browser, OS, etc.)
+ * @property {Object} permissions - User permissions for tool execution
+ * @property {Object} [previousResults] - Results from previous tool executions in this session
+ */
+
+/**
+ * @typedef {Object} ToolRegistry
+ * @description Registry containing all available tools
+ * @property {Map<string, Tool>} tools - Map of tool names to tool definitions
+ * @property {string[]} categories - Available tool categories
+ * @property {number} totalTools - Total number of registered tools
+ * @property {number} enabledTools - Number of currently enabled tools
+ * @property {string} lastUpdated - ISO timestamp when registry was last updated
+ */
+
+/**
+ * @typedef {Object} ToolValidator
+ * @description Validator for tool parameters
+ * @property {string} toolName - Name of the tool this validator is for
+ * @property {Function} validate - Function to validate tool arguments
+ * @property {Object} [schema] - JSON Schema for validation
+ * @property {string} [version] - Version of the validator
+ */
+
+/**
+ * @typedef {Object} ToolExecutionPolicy
+ * @description Policy governing tool execution
+ * @property {boolean} requireConfirmation - Whether user confirmation is required
+ * @property {string[]} [allowedTools] - List of tools that can be executed
+ * @property {string[]} [blockedTools] - List of tools that are blocked
+ * @property {Object} [rateLimits] - Rate limiting rules
+ * @property {Object} [permissions] - Permission requirements
+ * @property {boolean} [logExecutions] - Whether to log all tool executions
+ * @property {boolean} [requireAuthentication] - Whether authentication is required
+ */
+
+/**
+ * @typedef {Object} ToolExecutionLog
+ * @description Log entry for a tool execution
+ * @property {string} id - Unique identifier for the log entry
+ * @property {string} toolName - Name of the executed tool
+ * @property {string} userId - ID of the user who triggered the execution
+ * @property {string} sessionId - Session identifier
+ * @property {Object} arguments - Arguments passed to the tool
+ * @property {*} result - Result from tool execution
+ * @property {string} [error] - Error message if execution failed
+ * @property {number} executionTime - Time taken to execute the tool
+ * @property {string} executedAt - ISO timestamp when execution occurred
+ * @property {Object} [metadata] - Additional metadata about the execution
+ */
+
+/**
+ * @typedef {Object} ToolCategory
+ * @description Category grouping for tools
+ * @property {string} name - Category name
+ * @property {string} description - Category description
+ * @property {string} icon - Icon identifier for the category
+ * @property {Tool[]} tools - Tools belonging to this category
+ * @property {boolean} enabled - Whether the category is enabled
+ * @property {number} toolCount - Number of tools in this category
+ */
+
+/**
+ * @typedef {Object} ToolDependency
+ * @description Dependency relationship between tools
+ * @property {string} toolName - Name of the dependent tool
+ * @property {string} dependencyName - Name of the required tool
+ * @property {string} type - Type of dependency: 'required', 'optional', 'conflicts'
+ * @property {string} [version] - Required version of the dependency
+ * @property {string} [description] - Description of why this dependency exists
+ */
+
+/**
+ * @typedef {Object} ToolExecutionMetrics
+ * @description Metrics about tool execution performance
+ * @property {string} toolName - Name of the tool
+ * @property {number} totalExecutions - Total number of executions
+ * @property {number} successfulExecutions - Number of successful executions
+ * @property {number} failedExecutions - Number of failed executions
+ * @property {number} averageExecutionTime - Average execution time in milliseconds
+ * @property {number} minExecutionTime - Minimum execution time in milliseconds
+ * @property {number} maxExecutionTime - Maximum execution time in milliseconds
+ * @property {number} successRate - Success rate as a percentage
+ * @property {string} lastExecuted - ISO timestamp of last execution
+ * @property {Object} [errorBreakdown] - Breakdown of error types
+ */

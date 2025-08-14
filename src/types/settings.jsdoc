@@ -1,0 +1,161 @@
+/**
+ * JSDoc type definitions for application settings and configuration interfaces.
+ * Defines ChatSettings, APISettings, UI settings, and feature configuration structures.
+ */
+/**
+ * @typedef {Object} ChatSettings
+ * @description Configuration settings for the chat application
+ * @property {Object} api - API configuration settings
+ * @property {string} api.key - OpenAI API key
+ * @property {string} api.endpoint - API endpoint URL
+ * @property {string} api.model - AI model to use for chat
+ * @property {Object} chat - Chat behavior settings
+ * @property {string} chat.systemPrompt - System instruction for the AI
+ * @property {number} chat.temperature - Creativity level (0-2)
+ * @property {number} chat.maxTokens - Maximum tokens per response
+ * @property {Object} history - Chat history settings
+ * @property {boolean} history.persist - Whether to save chat history
+ * @property {number} history.maxItems - Maximum number of history items
+ * @property {Object} ui - User interface settings
+ * @property {string} ui.theme - Visual theme (light, dark, auto)
+ * @property {string} ui.fontSize - Text size (small, medium, large)
+ * @property {boolean} ui.showTimestamps - Whether to show message timestamps
+ * @property {Object} tools - Tool execution settings
+ * @property {boolean} tools.enabled - Whether tools are enabled
+ * @property {boolean} tools.confirmExecution - Whether to confirm tool execution
+ */
+
+/**
+ * @typedef {Object} APISettings
+ * @description API configuration settings
+ * @property {string} key - OpenAI API key (sensitive)
+ * @property {string} endpoint - API endpoint URL
+ * @property {string} model - AI model to use (e.g., 'gpt-3.5-turbo')
+ * @property {number} [timeout] - Request timeout in milliseconds
+ * @property {Object} [headers] - Additional HTTP headers
+ * @property {boolean} [retryOnFailure] - Whether to retry failed requests
+ * @property {number} [maxRetries] - Maximum number of retry attempts
+ * @property {Object} [rateLimiting] - Rate limiting configuration
+ * @property {number} [rateLimiting.requestsPerMinute] - Requests allowed per minute
+ * @property {number} [rateLimiting.requestsPerHour] - Requests allowed per hour
+ */
+
+/**
+ * @typedef {Object} ChatBehaviorSettings
+ * @description Settings that control chat behavior
+ * @property {string} systemPrompt - System instruction for the AI assistant
+ * @property {number} temperature - Creativity level (0 = focused, 2 = creative)
+ * @property {number} maxTokens - Maximum tokens in AI response
+ * @property {number} [topP] - Nucleus sampling parameter
+ * @property {number} [frequencyPenalty] - Frequency penalty for repetition
+ * @property {number} [presencePenalty] - Presence penalty for new topics
+ * @property {boolean} [streamResponses] - Whether to stream AI responses
+ * @property {boolean} [showTypingIndicator] - Whether to show typing indicator
+ * @property {number} [responseDelay] - Artificial delay before response (ms)
+ * @property {boolean} [autoScroll] - Whether to auto-scroll to new messages
+ */
+
+/**
+ * @typedef {Object} HistorySettings
+ * @description Chat history management settings
+ * @property {boolean} persist - Whether to save chat history locally
+ * @property {number} maxItems - Maximum number of history items to keep
+ * @property {string} [storageKey] - Local storage key for history
+ * @property {boolean} [autoSave] - Whether to auto-save during conversation
+ * @property {number} [saveInterval] - Interval between auto-saves (ms)
+ * @property {boolean} [exportEnabled] - Whether history export is enabled
+ * @property {string[]} [exportFormats] - Supported export formats
+ * @property {boolean} [importEnabled] - Whether history import is enabled
+ * @property {boolean} [clearOnStartup] - Whether to clear history on startup
+ * @property {Object} [retention] - History retention policies
+ * @property {number} [retention.maxAge] - Maximum age of history items (days)
+ * @property {number} [retention.maxSize] - Maximum size of history data (MB)
+ */
+
+/**
+ * @typedef {Object} UISettings
+ * @description User interface appearance and behavior settings
+ * @property {string} theme - Visual theme: 'light', 'dark', or 'auto'
+ * @property {string} fontSize - Text size: 'small', 'medium', or 'large'
+ * @property {boolean} showTimestamps - Whether to display message timestamps
+ * @property {boolean} showUserAvatars - Whether to show user avatars
+ * @property {boolean} showToolCalls - Whether to display tool call information
+ * @property {boolean} showExecutionTime - Whether to show tool execution time
+ * @property {string} [layout] - Chat layout: 'compact', 'comfortable', or 'spacious'
+ * @property {boolean} [sidebarCollapsed] - Whether sidebar is collapsed
+ * @property {string[]} [visiblePanels] - Which UI panels are visible
+ * @property {Object} [colors] - Custom color scheme
+ * @property {string} [colors.primary] - Primary color
+ * @property {string} [colors.secondary] - Secondary color
+ * @property {string} [colors.accent] - Accent color
+ * @property {Object} [animations] - Animation settings
+ * @property {boolean} [animations.enabled] - Whether animations are enabled
+ * @property {number} [animations.duration] - Animation duration (ms)
+ */
+
+/**
+ * @typedef {Object} ToolSettings
+ * @description Tool execution and management settings
+ * @property {boolean} enabled - Whether tools are enabled
+ * @property {boolean} confirmExecution - Whether to confirm tool execution
+ * @property {string[]} [allowedTools] - List of tools that can be executed
+ * @property {string[]} [blockedTools] - List of tools that are blocked
+ * @property {Object} [executionPolicy] - Tool execution policy
+ * @property {boolean} [executionPolicy.requireAuth] - Whether authentication is required
+ * @property {boolean} [executionPolicy.logExecutions] - Whether to log executions
+ * @property {Object} [rateLimiting] - Tool execution rate limiting
+ * @property {number} [rateLimiting.maxPerMinute] - Max executions per minute
+ * @property {number} [rateLimiting.maxPerHour] - Max executions per hour
+ * @property {Object} [permissions] - Tool execution permissions
+ * @property {boolean} [permissions.allowFileAccess] - Whether tools can access files
+ * @property {boolean} [permissions.allowNetworkAccess] - Whether tools can access network
+ * @property {boolean} [permissions.allowSystemAccess] - Whether tools can access system
+ */
+
+/**
+ * @typedef {Object} NotificationSettings
+ * @description Notification and alert settings
+ * @property {boolean} enabled - Whether notifications are enabled
+ * @property {string[]} [types] - Types of notifications to show
+ * @property {boolean} [sound] - Whether to play notification sounds
+ * @property {boolean} [desktop] - Whether to show desktop notifications
+ * @property {boolean} [browser] - Whether to show browser notifications
+ * @property {Object} [sounds] - Custom notification sounds
+ * @property {string} [sounds.message] - Sound for new messages
+ * @property {string} [sounds.tool] - Sound for tool execution
+ * @property {string} [sounds.error] - Sound for errors
+ * @property {Object} [timing] - Notification timing settings
+ * @property {number} [timing.duration] - How long to show notifications (ms)
+ * @property {boolean} [timing.autoHide] - Whether to auto-hide notifications
+ */
+
+/**
+ * @typedef {Object} PrivacySettings
+ * @description Privacy and data handling settings
+ * @property {boolean} analytics - Whether to collect usage analytics
+ * @property {boolean} errorReporting - Whether to report errors
+ * @property {boolean} telemetry - Whether to collect telemetry data
+ * @property {Object} [dataRetention] - Data retention policies
+ * @property {number} [dataRetention.chatHistory] - Days to retain chat history
+ * @property {number} [dataRetention.userData] - Days to retain user data
+ * @property {number} [dataRetention.logs] - Days to retain logs
+ * @property {boolean} [dataSharing] - Whether to share data with third parties
+ * @property {string[]} [dataSharing.partners] - List of data sharing partners
+ * @property {Object} [encryption] - Data encryption settings
+ * @property {boolean} [encryption.enabled] - Whether to encrypt stored data
+ * @property {string} [encryption.method] - Encryption method to use
+ */
+
+/**
+ * @typedef {Object} AccessibilitySettings
+ * @description Accessibility and usability settings
+ * @property {boolean} highContrast - Whether to use high contrast mode
+ * @property {boolean} reducedMotion - Whether to reduce animations
+ * @property {string} [fontFamily] - Custom font family
+ * @property {number} [lineHeight] - Line height multiplier
+ * @property {boolean} [screenReader] - Screen reader optimizations
+ * @property {boolean} [keyboardNavigation] - Enhanced keyboard navigation
+ * @property {Object} [colorBlindness] - Color blindness accommodations
+ * @property {string} [colorBlindness.type] - Type of color blindness
+ * @property {boolean} [colorBlindness.enhanced] - Enhanced color schemes
+ */
