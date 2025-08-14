@@ -1,3 +1,5 @@
+/* ROLE: openaiClient — тънка обвивка за HTTP заявки към модела (headers, endpoints). Без UI/стор логика; без знание за компоненти. */
+
 /**
  * OpenAIClient - Thin HTTP wrapper for OpenAI API requests with streaming support.
  * Manages authentication, request formatting, and response handling for chat completions.

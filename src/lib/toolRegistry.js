@@ -1,3 +1,5 @@
+/* ROLE: toolRegistry — декларации/метаданни за инструменти (име, описание, вход/изход, политики). Без имплементация на UI; без странични ефекти. */
+
 /**
  * ToolRegistry - Central registry for managing available AI tools with schemas and metadata.
  * Provides tool discovery, registration, and OpenAI-compatible format conversion.

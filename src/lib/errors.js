@@ -1,3 +1,5 @@
+/* ROLE: errors — мап от кодове към човешки съобщения/насоки. Без бизнес и UI логика. */
+
 /**
  * Error handling utilities with human-readable message mapping and consistent error classes.
  * Provides error codes, user-friendly messages, and error reporting capabilities.

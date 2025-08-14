@@ -1,3 +1,5 @@
+/* ROLE: useLocalStorage — четене/запис на локална история и настройки, само ако persistHistory е включено. Без логика за API/модел. */
+
 /**
  * useLocalStorage - Hook for persisting data in browser localStorage with error handling.
  * Provides save/load functionality for chat history and user preferences.

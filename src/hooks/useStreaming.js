@@ -1,3 +1,5 @@
+/* ROLE: useStreaming — управлява ReadableStream и AbortController за входящите отговори. Носи само стрийм логика, без бизнес правила. */
+
 /**
  * useStreaming - Manages streaming responses and AbortController for cancellable HTTP requests.
  * Handles real-time data flow and provides abort functionality for user-initiated stops.

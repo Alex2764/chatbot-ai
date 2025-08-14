@@ -171,3 +171,5 @@ const useMessagesStore = create((set, get) => ({
 }));
 
 export default useMessagesStore;
+
+// TODO: След всяко добавяне на съобщение, ако messages.length > HISTORY_LIMIT — подрежи началото (запазвай последните N).

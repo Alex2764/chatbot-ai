@@ -1,3 +1,5 @@
+/* ROLE: SettingsPanel — UI панел за настройки; НЕ пази трайно apiKey. Виж TODO в тялото. */
+
 /**
  * SettingsPanel - Configuration interface for API key, system prompt, temperature, and history settings.
  * Provides form controls for customizing chat behavior and AI model parameters.

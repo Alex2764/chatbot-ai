@@ -1,3 +1,5 @@
+/* ROLE: ChatLayout — рамка на екрана. Подредба на секции без бизнес логика: MessageList, MessageInput, TypingIndicator, UiPortal. */
+
 /**
  * ChatLayout - Main container component that wraps the entire chat interface.
  * Provides the overall structure and layout for the chat application.

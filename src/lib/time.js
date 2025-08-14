@@ -1,3 +1,5 @@
+/* ROLE: time — помощни за време/формати (ISO, човекочитаемо). Без достъп до мрежа и UI. */
+
 /**
  * Time utility functions for formatting, parsing, and manipulating dates and timestamps.
  * Includes human-readable formatting, duration calculations, and debounce/throttle helpers.

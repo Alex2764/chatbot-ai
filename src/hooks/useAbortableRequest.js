@@ -1,3 +1,5 @@
+/* ROLE: useAbortableRequest — помощен хук за заявки с таймаут и отменяне (AbortController). Без знание за чат протокола. */
+
 /**
  * useAbortableRequest - General-purpose hook for making HTTP requests with timeout and abort capabilities.
  * Provides consistent request management with automatic cleanup and error handling.

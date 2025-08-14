@@ -1,3 +1,5 @@
+/* ROLE: toolValidators — строга валидация на аргументи за всеки инструмент; връща контролируеми грешки и никога не изпълнява UI действия. */
+
 /**
  * ToolValidators - Validates tool arguments using registered validators or schema validation.
  * Provides custom validation logic for each tool type with fallback schema validation.

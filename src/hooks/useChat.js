@@ -1,3 +1,5 @@
+/* ROLE: useChat — оркестрация на чат потока (изпращане → стрийм → tool-call → tool-result → финален отговор). Няма UI/DOM логика; работи само със store-ове и помощни функции. */
+
 /**
  * useChat - High-level chat management hook that orchestrates message sending, receiving, and tool flow.
  * Integrates streaming, local storage, and tool execution for complete chat functionality.
