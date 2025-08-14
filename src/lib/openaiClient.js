@@ -87,6 +87,25 @@ class OpenAIClient {
   setBaseURL(baseURL) {
     this.baseURL = baseURL;
   }
+
+  async ping() {
+    try {
+      // Test the API key by making a simple request to list models
+      const response = await this.makeRequest('/models', {
+        method: 'GET'
+      });
+      
+      // If we get here, the API key is valid
+      return { success: true, message: 'Key OK' };
+    } catch (error) {
+      // Check if it's an authentication error (401) or network error
+      if (error.message.includes('401')) {
+        return { success: false, message: 'Invalid key' };
+      } else {
+        return { success: false, message: 'Network error' };
+      }
+    }
+  }
 }
 
 export default OpenAIClient;

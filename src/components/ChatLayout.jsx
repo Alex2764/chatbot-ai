@@ -22,12 +22,63 @@
  * - Proper spacing and visual hierarchy between sections
  * - Loading states and error boundaries
  */
-import React from 'react';
+import React, { useState } from 'react';
+import MessageList from './MessageList';
+import MessageInput from './MessageInput';
+import TypingIndicator from './TypingIndicator';
+import SettingsPanel from './SettingsPanel';
+import { useChat } from '../hooks/useChat';
 
-const ChatLayout = ({ children }) => {
+const ChatLayout = () => {
+  const { messages, isStreaming, sendMessage, stopMessage } = useChat();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const handleSendMessage = (content) => {
+    sendMessage(content);
+  };
+
+  const handleStopMessage = () => {
+    stopMessage();
+  };
+
+  const openSettings = () => {
+    setIsSettingsOpen(true);
+  };
+
+  const closeSettings = () => {
+    setIsSettingsOpen(false);
+  };
+
   return (
     <div className="chat-layout">
-      {children}
+      <div className="chat-container">
+        <div className="chat-header">
+          <h1>Chatbot AI</h1>
+          <button className="settings-button" onClick={openSettings}>
+            ⚙️
+          </button>
+        </div>
+        
+        <div className="chat-main">
+          <MessageList messages={messages} />
+          <TypingIndicator isVisible={isStreaming} />
+        </div>
+        
+        <div className="chat-footer">
+          <MessageInput 
+            onSend={handleSendMessage}
+            onStop={handleStopMessage}
+            isStreaming={isStreaming}
+            disabled={false}
+          />
+        </div>
+      </div>
+
+      {/* Settings Panel */}
+      <SettingsPanel 
+        isOpen={isSettingsOpen}
+        onClose={closeSettings}
+      />
     </div>
   );
 };
