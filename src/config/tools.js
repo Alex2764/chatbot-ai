@@ -99,13 +99,13 @@ export const TOOL_CONFIG = {
         type: 'string',
         description: 'Title or name for the note',
         required: true,
-        constraints: 'Must be 1-100 characters, alphanumeric with spaces, hyphens, and underscores only'
+        constraints: 'Alphanumeric characters, spaces, hyphens, and underscores only'
       },
       content: {
         type: 'string',
-        description: 'The actual note content or text',
+        description: 'The note content or body text',
         required: true,
-        constraints: 'Must be 1-10,000 characters, supports plain text and basic formatting'
+        constraints: 'Any text content up to 10,000 characters'
       }
     },
     expectedOutputs: {
@@ -119,7 +119,7 @@ export const TOOL_CONFIG = {
       },
       savedAt: {
         type: 'string',
-        description: 'Timestamp when the note was saved'
+        description: 'ISO timestamp when the note was saved'
       }
     },
     examples: [
@@ -135,9 +135,9 @@ export const TOOL_CONFIG = {
 
   read_note: {
     name: 'read_note',
-    description: 'Retrieve a previously saved note by title',
-    shortDescription: 'Retrieves a previously saved note by searching for its title',
-    longDescription: 'This tool searches through the user\'s saved notes to find and retrieve a specific note by its title. It provides access to previously saved information like meeting notes, to-do lists, or personal reminders. If no note is found with the exact title, it may suggest similar titles or return an appropriate message. Notes are retrieved from the user\'s local browser storage.',
+    description: 'Read a previously saved note from local storage',
+    shortDescription: 'Retrieves a saved note by its title',
+    longDescription: 'This tool retrieves previously saved notes from local browser storage. Users can search for notes by their exact title. If a note is found, it returns the full content along with metadata like when it was saved. Useful for reviewing meeting notes, checking to-do lists, or accessing any previously saved information.',
     category: 'notes',
     icon: '📖',
     enabled: true,
@@ -145,29 +145,23 @@ export const TOOL_CONFIG = {
     expectedInputs: {
       title: {
         type: 'string',
-        description: 'The exact title of the note to retrieve',
+        description: 'Exact title of the note to retrieve',
         required: true,
-        constraints: 'Must be 1-100 characters, should match the exact title used when saving'
+        constraints: 'Must match the exact title used when saving'
       }
     },
     expectedOutputs: {
       found: {
         type: 'boolean',
-        description: 'Whether a note with the specified title was found'
+        description: 'Whether the note was found'
       },
       note: {
         type: 'object',
-        description: 'The retrieved note object (if found)',
-        properties: {
-          title: 'string - The note title',
-          content: 'string - The note content',
-          savedAt: 'string - When the note was saved',
-          noteId: 'string - Unique identifier'
-        }
+        description: 'The note object with title, content, and metadata'
       },
       message: {
         type: 'string',
-        description: 'Status message about the retrieval attempt'
+        description: 'Human-readable message about the result'
       }
     },
     examples: [
@@ -176,17 +170,16 @@ export const TOOL_CONFIG = {
       'read_note({ title: "Ideas" }) - Retrieves saved ideas'
     ],
     rateLimit: {
-      maxPerMinute: 20,
-      maxPerHour: 200
+      maxPerMinute: 30,
+      maxPerHour: 500
     }
   },
 
-  // UI Control Tools
   open_ui: {
     name: 'open_ui',
-    description: 'Open specific UI components like settings, help, or about panels',
-    shortDescription: 'Opens specific user interface components or panels',
-    longDescription: 'This tool allows the AI to control the user interface by opening specific panels or components. It can open settings panels for configuration, help documentation, or about information. This provides a way for the AI to guide users to relevant interface elements or provide contextual assistance. The tool respects user preferences and only opens components that are appropriate for the current context.',
+    description: 'Open a specific UI component or modal',
+    shortDescription: 'Opens UI components like settings, help, or about panels',
+    longDescription: 'This tool allows the AI to open specific UI components or modals within the application. It can open settings panels, help documentation, about information, or other UI elements. This is useful when users need to access configuration options, get help, or view application information. The tool provides a way for the AI to guide users to relevant parts of the interface.',
     category: 'ui',
     icon: '🖥️',
     enabled: true,
@@ -211,7 +204,7 @@ export const TOOL_CONFIG = {
       },
       message: {
         type: 'string',
-        description: 'User-friendly message about what was opened'
+        description: 'Human-readable message about the action'
       }
     },
     examples: [
@@ -220,8 +213,8 @@ export const TOOL_CONFIG = {
       'open_ui({ component: "about" }) - Opens the about information panel'
     ],
     rateLimit: {
-      maxPerMinute: 5,
-      maxPerHour: 50
+      maxPerMinute: 20,
+      maxPerHour: 200
     }
   }
 };
@@ -232,17 +225,17 @@ export const TOOL_CATEGORIES = {
     name: 'Time & Date',
     description: 'Tools for working with time and dates',
     icon: '🕐',
-    color: '#3b82f6'
+    color: '#10b981'
   },
   math: {
     name: 'Mathematics',
     description: 'Tools for calculations and mathematical operations',
     icon: '🧮',
-    color: '#10b981'
+    color: '#3b82f6'
   },
   notes: {
-    name: 'Notes',
-    description: 'Tools for saving and retrieving notes',
+    name: 'Notes & Storage',
+    description: 'Tools for saving and retrieving personal notes',
     icon: '📝',
     color: '#f59e0b'
   },

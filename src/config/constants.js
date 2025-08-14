@@ -56,6 +56,8 @@ export const MAX_FILES_PER_UPLOAD = 3;
 export const MAX_TOOL_CALLS_PER_MESSAGE = 5;
 export const TOOL_EXECUTION_TIMEOUT_MS = 15000;
 export const MAX_TOOL_EXECUTION_TIME_MS = 30000;
+export const TOOL_CALL_TIMEOUT_MS = 10000;
+export const RETRY_COUNT = 3;
 
 // Error Handling
 export const MAX_RETRY_ATTEMPTS = 2;
@@ -137,6 +139,8 @@ export const CONSTANTS = {
   MAX_TOOL_CALLS_PER_MESSAGE,
   TOOL_EXECUTION_TIMEOUT_MS,
   MAX_TOOL_EXECUTION_TIME_MS,
+  TOOL_CALL_TIMEOUT_MS,
+  RETRY_COUNT,
   
   // Error Handling
   MAX_RETRY_ATTEMPTS,
