@@ -1,8 +1,8 @@
-/* ROLE: MessageInput — поле за въвеждане на съобщения + бутони за изпращане/спиране. */
+/* ROLE: MessageInput — поле за въвеждане на съобщения + бутони за изпращане/спиране + бутони за функции (калкулатор/време). */
 
 /**
  * MessageInput - Input field and control buttons for sending messages and stopping streaming.
- * Handles text input, Enter key submission, and streaming state management.
+ * Handles text input, Enter key submission, streaming state management, and function-specific buttons.
  */
 import React, { useState, useRef, useEffect } from 'react';
 import { useChat } from '../hooks/useChat';
@@ -12,6 +12,7 @@ import { MAX_INPUT_LENGTH } from '../config/constants';
 const MessageInput = ({ onSend, onStop, isStreaming, disabled }) => {
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState('');
+  const [selectedFunction, setSelectedFunction] = useState(null); // 'calculate' or 'get_current_time'
   const textareaRef = useRef(null);
   const { sendMessage } = useChat();
   const { isStreaming: runtimeStreaming } = useRuntimeStore();
@@ -19,7 +20,7 @@ const MessageInput = ({ onSend, onStop, isStreaming, disabled }) => {
   // Use runtime store streaming state if available, fallback to prop
   const isCurrentlyStreaming = runtimeStreaming !== undefined ? runtimeStreaming : isStreaming;
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (functionType = null) => {
     const trimmedText = inputValue.trim();
     
     // Validation
@@ -39,11 +40,12 @@ const MessageInput = ({ onSend, onStop, isStreaming, disabled }) => {
       // Clear any previous errors
       setError('');
       
-      // Send message through useChat hook
-      await sendMessage(trimmedText);
+      // Send message through useChat hook with function type
+      await sendMessage(trimmedText, functionType);
       
-      // Clear input after successful send
+      // Clear input and function selection after successful send
       setInputValue('');
+      setSelectedFunction(null);
       
       // Focus back to input for next message
       textareaRef.current?.focus();
@@ -58,7 +60,7 @@ const MessageInput = ({ onSend, onStop, isStreaming, disabled }) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (!isCurrentlyStreaming && !disabled) {
-        handleSubmit();
+        handleSubmit(selectedFunction);
       }
     }
   };
@@ -72,6 +74,17 @@ const MessageInput = ({ onSend, onStop, isStreaming, disabled }) => {
   const handleStopClick = () => {
     if (onStop) {
       onStop();
+    }
+  };
+
+  const handleFunctionButtonClick = (functionType) => {
+    setSelectedFunction(functionType);
+    // If there's already text, send immediately
+    if (inputValue.trim()) {
+      handleSubmit(functionType);
+    } else {
+      // Focus the input for user to type
+      textareaRef.current?.focus();
     }
   };
 
@@ -92,6 +105,26 @@ const MessageInput = ({ onSend, onStop, isStreaming, disabled }) => {
         </div>
       )}
       
+      {/* Function Buttons */}
+      <div className="message-input-function-buttons">
+        <button
+          className={`btn btn-function ${selectedFunction === 'calculate' ? 'btn-function-active' : ''}`}
+          onClick={() => handleFunctionButtonClick('calculate')}
+          disabled={disabled || isCurrentlyStreaming}
+          title="Use calculator function"
+        >
+          🧮 Calculator
+        </button>
+        <button
+          className={`btn btn-function ${selectedFunction === 'get_current_time' ? 'btn-function-active' : ''}`}
+          onClick={() => handleFunctionButtonClick('get_current_time')}
+          disabled={disabled || isCurrentlyStreaming}
+          title="Get current time"
+        >
+          🕐 Time
+        </button>
+      </div>
+      
       {/* Input Field */}
       <textarea
         ref={textareaRef}
@@ -99,7 +132,11 @@ const MessageInput = ({ onSend, onStop, isStreaming, disabled }) => {
         value={inputValue}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
-        placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
+        placeholder={selectedFunction === 'calculate' 
+          ? "Enter calculation (e.g., 2+2*3)... (Enter to send)" 
+          : selectedFunction === 'get_current_time'
+          ? "Ask about time... (Enter to send)"
+          : "Type your message... (Enter to send, Shift+Enter for new line)"}
         disabled={disabled || isCurrentlyStreaming}
         rows={1}
         maxLength={MAX_INPUT_LENGTH}
@@ -123,7 +160,7 @@ const MessageInput = ({ onSend, onStop, isStreaming, disabled }) => {
         ) : (
           <button
             className="btn btn-send"
-            onClick={handleSubmit}
+            onClick={() => handleSubmit(selectedFunction)}
             disabled={disabled || !inputValue.trim() || inputValue.length > MAX_INPUT_LENGTH}
           >
             Send

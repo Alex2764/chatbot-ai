@@ -30,7 +30,7 @@ export const STORAGE_CLEANUP_INTERVAL_MS = 300000; // 5 minutes
 
 // API Configuration
 export const DEFAULT_API_ENDPOINT = 'https://api.openai.com/v1';
-export const DEFAULT_MODEL = 'gpt-3.5-turbo';
+export const DEFAULT_MODEL = 'gpt-4o-mini';
 export const MAX_TOKENS = 2000;
 export const DEFAULT_TEMPERATURE = 0.7;
 export const MAX_TEMPERATURE = 2.0;

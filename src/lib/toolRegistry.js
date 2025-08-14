@@ -11,17 +11,17 @@ class ToolRegistry {
   }
 
   initializeDefaultTools() {
-    // Get current time tool
+    // Get current time tool (simplest possible)
     this.registerTool({
       name: 'get_current_time',
-      description: 'Get the current date and time',
+      description: 'Get current time',
       schema: {
-        type: 'function',
+        type: "function",
         function: {
-          name: 'get_current_time',
-          description: 'Returns the current date and time in ISO format',
+          name: "get_current_time",
+          description: "Get the current date and time. Use ONLY for time questions like 'what time is it?' or 'колко е часът?'",
           parameters: {
-            type: 'object',
+            type: "object",
             properties: {},
             required: []
           }
@@ -36,24 +36,24 @@ class ToolRegistry {
       requiresConfirm: false
     });
 
-    // Calculate tool
+    // Calculate tool (adding back for testing)
     this.registerTool({
       name: 'calculate',
       description: 'Perform mathematical calculations',
       schema: {
-        type: 'function',
+        type: "function",
         function: {
-          name: 'calculate',
-          description: 'Evaluate mathematical expressions safely',
+          name: "calculate",
+          description: "Perform mathematical calculations. Use ONLY for math questions like 'calculate 2+2' or 'изчисли 5*3'",
           parameters: {
-            type: 'object',
+            type: "object",
             properties: {
               expression: {
-                type: 'string',
-                description: 'Mathematical expression to evaluate (e.g., "2 + 2 * 3")'
+                type: "string",
+                description: "The mathematical expression to evaluate (e.g., '2 + 2 * 3')"
               }
             },
-            required: ['expression']
+            required: ["expression"]
           }
         }
       },
@@ -83,149 +83,14 @@ class ToolRegistry {
       requiresConfirm: false
     });
 
-    // Save note tool
-    this.registerTool({
-      name: 'save_note',
-      description: 'Save a note to local storage',
-      schema: {
-        type: 'function',
-        function: {
-          name: 'save_note',
-          description: 'Save a note with title and content to local storage',
-          parameters: {
-            type: 'object',
-            properties: {
-              title: {
-                type: 'string',
-                description: 'Title of the note'
-              },
-              content: {
-                type: 'string',
-                description: 'Content of the note'
-              }
-            },
-            required: ['title', 'content']
-          }
-        }
-      },
-      execute: async (args) => {
-        const { title, content } = args;
-        
-        try {
-          const notes = JSON.parse(localStorage.getItem('ai_notes') || '[]');
-          const newNote = {
-            id: Date.now().toString(),
-            title: title.trim(),
-            content: content.trim(),
-            timestamp: new Date().toISOString()
-          };
-          
-          notes.push(newNote);
-          localStorage.setItem('ai_notes', JSON.stringify(notes));
-          
-          return {
-            success: true,
-            noteId: newNote.id,
-            message: `Note "${title}" saved successfully`
-          };
-        } catch (error) {
-          throw new Error(`Failed to save note: ${error.message}`);
-        }
-      },
-      requiresConfirm: true
-    });
+    // Save note tool - disabled for testing
+    // this.registerTool({...});
 
-    // Read note tool
-    this.registerTool({
-      name: 'read_note',
-      description: 'Read notes from local storage',
-      schema: {
-        type: 'function',
-        function: {
-          name: 'read_note',
-          description: 'Read notes from local storage, optionally filtered by title',
-          parameters: {
-            type: 'object',
-            properties: {
-              title: {
-                type: 'string',
-                description: 'Optional title to search for (leave empty for all notes)'
-              }
-            },
-            required: []
-          }
-        }
-      },
-      execute: async (args) => {
-        const { title } = args;
-        
-        try {
-          const notes = JSON.parse(localStorage.getItem('ai_notes') || '[]');
-          
-          if (title && title.trim()) {
-            const filtered = notes.filter(note => 
-              note.title.toLowerCase().includes(title.toLowerCase()) ||
-              note.content.toLowerCase().includes(title.toLowerCase())
-            );
-            
-            return {
-              found: filtered.length,
-              notes: filtered,
-              message: `Found ${filtered.length} note(s) matching "${title}"`
-            };
-          } else {
-            return {
-              found: notes.length,
-              notes: notes,
-              message: `Found ${notes.length} total note(s)`
-            };
-          }
-        } catch (error) {
-          throw new Error(`Failed to read notes: ${error.message}`);
-        }
-      },
-      requiresConfirm: false
-    });
+    // Read note tool - disabled for testing  
+    // this.registerTool({...});
 
-    // Open UI tool
-    this.registerTool({
-      name: 'open_ui',
-      description: 'Open a UI component or modal',
-      schema: {
-        type: 'function',
-        function: {
-          name: 'open_ui',
-          description: 'Open a specific UI component or modal',
-          parameters: {
-            type: 'object',
-            properties: {
-              component: {
-                type: 'string',
-                description: 'Name of the UI component to open (e.g., "settings", "help", "notes")'
-              },
-              data: {
-                type: 'object',
-                description: 'Optional data to pass to the component'
-              }
-            },
-            required: ['component']
-          }
-        }
-      },
-      execute: async (args) => {
-        const { component, data } = args;
-        
-        // This would typically emit an event or call a callback
-        // For now, we'll return a success message
-        return {
-          success: true,
-          component: component,
-          message: `UI component "${component}" opened successfully`,
-          data: data || {}
-        };
-      },
-      requiresConfirm: true
-    });
+    // Open UI tool - disabled for testing
+    // this.registerTool({...});
   }
 
   registerTool(tool) {

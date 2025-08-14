@@ -51,7 +51,7 @@ class OpenAIClient {
 
   async chatCompletion(messages, options = {}) {
     const defaultOptions = {
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4o-mini',
       temperature: 0.7,
       max_tokens: 1000,
       stream: false
@@ -78,7 +78,7 @@ class OpenAIClient {
     const response = await this.makeRequest('/chat/completions', {
       method: 'POST',
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o-mini',
         temperature: 0.7,
         max_tokens: 1000,
         ...streamOptions,
@@ -105,25 +105,28 @@ class OpenAIClient {
     }
   }
 
-  async chat({ messages, systemPrompt, temperature, toolsCatalog }) {
+  async chat({ messages, systemPrompt, temperature, toolsCatalog, maxOutputTokens, topP }) {
     const url = `${this.baseURL}/chat/completions`;
     
+    // Following OpenAI official documentation for function calling
     const requestBody = {
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: systemPrompt || 'You are a helpful assistant.' },
         ...messages
       ],
       temperature: temperature || 0.7,
-      stream: true,
-      max_tokens: 1000
+      max_tokens: maxOutputTokens || 1000,
+      stream: true
     };
 
-    // Add tools if provided
+    // Add tools if provided (following official format)
     if (toolsCatalog && toolsCatalog.length > 0) {
       requestBody.tools = toolsCatalog;
-      requestBody.tool_choice = 'auto';
+      // Note: tool_choice is not needed for basic function calling
     }
+
+    console.log("OpenAI request payload:", requestBody);
 
     try {
       const response = await fetch(url, {
@@ -137,6 +140,7 @@ class OpenAIClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.log("OpenAI API error details:", errorData);
         const errorMessage = `OpenAI API error: ${response.status} ${response.statusText} - ${errorData.error?.message || ''}`;
         throw new Error(errorMessage);
       }
@@ -152,7 +156,7 @@ class OpenAIClient {
       return this.createStream(reader, decoder, buffer);
 
     } catch (error) {
-      // Use the new error handling system
+      console.log("OpenAI API error:", error);
       const errorResponse = handleOpenAIError(error);
       throw new Error(JSON.stringify(errorResponse));
     }
@@ -160,6 +164,9 @@ class OpenAIClient {
 
   async *createStream(reader, decoder, buffer) {
     try {
+      // Track incomplete tool calls
+      const incompleteToolCalls = new Map();
+      
       while (true) {
         const { done, value } = await reader.read();
         
@@ -192,19 +199,59 @@ class OpenAIClient {
 
               if (choice.delta?.tool_calls) {
                 for (const toolCall of choice.delta.tool_calls) {
-                  if (toolCall.function) {
-                    yield {
-                      type: 'tool_call',
-                      id: toolCall.index,
-                      name: toolCall.function.name,
-                      args: toolCall.function.arguments ? JSON.parse(toolCall.function.arguments) : {}
-                    };
+                  const toolCallId = toolCall.index;
+                  
+                  // Initialize tool call if not exists
+                  if (!incompleteToolCalls.has(toolCallId)) {
+                    incompleteToolCalls.set(toolCallId, {
+                      id: toolCallId,
+                      name: '',
+                      args: ''
+                    });
+                  }
+                  
+                  const currentToolCall = incompleteToolCalls.get(toolCallId);
+                  
+                  // Accumulate tool call data
+                  if (toolCall.function?.name) {
+                    currentToolCall.name = toolCall.function.name;
+                  }
+                  
+                  if (toolCall.function?.arguments) {
+                    currentToolCall.args += toolCall.function.arguments;
+                  }
+                  
+                  // Check if this tool call is complete (has both name and complete args)
+                  if (currentToolCall.name && currentToolCall.args) {
+                    try {
+                      // Try to parse the accumulated arguments
+                      const parsedArgs = JSON.parse(currentToolCall.args);
+                      
+                      // Yield the complete tool call
+                      yield {
+                        type: 'tool_call',
+                        id: currentToolCall.id,
+                        name: currentToolCall.name,
+                        args: parsedArgs
+                      };
+                      
+                      // Remove from incomplete calls
+                      incompleteToolCalls.delete(toolCallId);
+                      
+                    } catch (parseError) {
+                      // Arguments are still incomplete, continue accumulating
+                      console.debug('Tool call arguments still incomplete, continuing...');
+                    }
                   }
                 }
               }
 
             } catch (parseError) {
-              console.warn('Failed to parse streaming data:', parseError);
+              // Only log parsing errors for debugging, don't break the stream
+              // This is normal for incomplete JSON chunks in streaming
+              if (process.env.NODE_ENV === 'development') {
+                console.debug('Streaming chunk parse warning (normal):', parseError.message);
+              }
             }
           }
         }
@@ -214,6 +261,92 @@ class OpenAIClient {
       throw error;
     } finally {
       reader.releaseLock();
+    }
+  }
+
+  // Cost estimation helper (approximate)
+  estimateCost(inputTokens, outputTokens, model = 'gpt-4o-mini') {
+    // Approximate costs per 1K tokens (as of 2024)
+    const costs = {
+      'gpt-3.5-turbo': { input: 0.0005, output: 0.0015 }, // $0.0005/$0.0015 per 1K tokens
+      'gpt-4': { input: 0.03, output: 0.06 }, // $0.03/$0.06 per 1K tokens
+      'gpt-4o': { input: 0.005, output: 0.015 }, // $0.005/$0.015 per 1K tokens
+      'gpt-4o-mini': { input: 0.00015, output: 0.0006 } // $0.00015/$0.0006 per 1K tokens
+    };
+    
+    const modelCosts = costs[model] || costs['gpt-4o-mini'];
+    const inputCost = (inputTokens / 1000) * modelCosts.input;
+    const outputCost = (outputTokens / 1000) * modelCosts.output;
+    const totalCost = inputCost + outputCost;
+    
+    return {
+      inputCost: inputCost.toFixed(6),
+      outputCost: outputCost.toFixed(6),
+      totalCost: totalCost.toFixed(6),
+      inputTokens,
+      outputTokens,
+      model
+    };
+  }
+
+  async testConfiguration({ systemPrompt, temperature, maxOutputTokens, topP }) {
+    try {
+      // Make a minimal request to test the configuration
+      // This will validate the API key and settings without generating content
+      const url = `${this.baseURL}/chat/completions`;
+      
+      // Calculate safe max_tokens for test
+      const estimatedInputTokens = Math.ceil((systemPrompt || 'You are a helpful assistant.').length / 4) + 10; // "Hello" message
+      const maxTotalTokens = 100000; // GPT-4o-mini limit
+      const safeMaxTokens = Math.min(10, maxTotalTokens - estimatedInputTokens - 1000);
+      
+      const testRequestBody = {
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt || 'You are a helpful assistant.' },
+          { role: 'user', content: 'Hello' }
+        ],
+        temperature: temperature || 0.7,
+        max_tokens: Math.max(1, safeMaxTokens), // Very small limit to minimize cost
+        top_p: topP || 0.9,
+        stream: false // No streaming for test
+      };
+
+      // Log the test request payload
+      console.log("OpenAI test configuration payload:", testRequestBody);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(testRequestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = `OpenAI API error: ${response.status} ${response.statusText} - ${errorData.error?.message || ''}`;
+        throw new Error(errorMessage);
+      }
+
+      // If we get here, the configuration is valid
+      return {
+        success: true,
+        message: 'Configuration is valid and ready to use',
+        estimatedCost: 'Very low (test request)',
+        settings: {
+          temperature,
+          maxOutputTokens,
+          topP,
+          systemPrompt: systemPrompt ? 'Set' : 'Default'
+        }
+      };
+
+    } catch (error) {
+      // Use the new error handling system
+      const errorResponse = handleOpenAIError(error);
+      return errorResponse;
     }
   }
 

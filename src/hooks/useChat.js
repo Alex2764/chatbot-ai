@@ -23,14 +23,14 @@ export const useChat = () => {
     startToolExecution, 
     completeToolExecution 
   } = useRuntimeStore();
-  const { apiKey, systemPrompt, temperature } = useSettingsStore();
+  const { apiKey, systemPrompt, temperature, maxOutputTokens, topP } = useSettingsStore();
 
-  const sendMessage = useCallback(async (text) => {
+  const sendMessage = useCallback(async (text, functionType = null) => {
     // Validation
     if (!text || !text.trim()) {
       throw new Error('Please enter a message');
     }
-    
+
     if (text.length > MAX_INPUT_LENGTH) {
       throw new Error(`Message too long (max ${MAX_INPUT_LENGTH} characters)`);
     }
@@ -61,12 +61,72 @@ export const useChat = () => {
       // Start streaming
       startStreaming();
 
+      // If a specific function is selected, execute it directly
+      if (functionType) {
+        console.log(`Executing specific function: ${functionType}`);
+        
+        try {
+          // Validate tool call
+          const validation = toolValidators.validateToolCall(functionType, functionType === 'calculate' ? { expression: text.trim() } : {});
+          console.log('Tool validation result:', validation);
+          
+          if (!validation.valid) {
+            throw new Error(`Tool validation failed: ${validation.error}`);
+          }
+
+          // Mark tool execution start
+          startToolExecution(functionType);
+
+          // Execute tool
+          const tool = toolRegistry.getTool(functionType);
+          if (!tool) {
+            throw new Error(`Tool '${functionType}' not found`);
+          }
+
+          const toolArgs = functionType === 'calculate' ? { expression: text.trim() } : {};
+          const toolResult = await tool.execute(toolArgs);
+          console.log(`Tool ${functionType} executed with result:`, toolResult);
+
+          // Add tool result message
+          const toolMessage = {
+            id: Date.now().toString(),
+            role: 'tool',
+            content: JSON.stringify(toolResult),
+            toolName: functionType,
+            timestamp: new Date().toISOString()
+          };
+          addMessage(toolMessage);
+          console.log('Added tool message:', toolMessage);
+
+          // Generate a natural language response based on the tool result
+          let naturalResponse = '';
+          if (functionType === 'calculate') {
+            naturalResponse = `The calculation result is: ${toolResult.formatted || toolResult.result}`;
+          } else if (functionType === 'get_current_time') {
+            naturalResponse = `The current time is: ${toolResult.formatted || toolResult.currentTime}`;
+          } else {
+            naturalResponse = `I used the ${functionType} tool and got: ${JSON.stringify(toolResult)}`;
+          }
+
+          // Update the assistant message with the natural response
+          updateLastMessage({ content: naturalResponse });
+
+        } catch (toolError) {
+          console.error('Tool execution error:', toolError);
+          setError(`Tool execution failed: ${toolError.message}`);
+        } finally {
+          completeToolExecution();
+        }
+        
+        return;
+      }
+
       // Create OpenAI client
       const client = new OpenAIClient(apiKey);
-      
-      // Prepare messages for API (excluding the empty assistant message)
+
+      // Prepare messages for API (excluding the empty assistant message and tool messages)
       const apiMessages = [
-        ...messages.filter(msg => msg.role !== 'assistant'),
+        ...messages.filter(msg => msg.role !== 'assistant' && msg.role !== 'tool'),
         userMessage
       ];
 
@@ -78,7 +138,9 @@ export const useChat = () => {
         messages: apiMessages,
         systemPrompt,
         temperature,
-        toolsCatalog
+        toolsCatalog,
+        maxOutputTokens,
+        topP
       });
 
       let finalContent = '';
@@ -86,20 +148,31 @@ export const useChat = () => {
 
       // Process streaming response
       for await (const chunk of stream) {
+        console.log('Received chunk:', chunk);
         if (chunk.type === 'text') {
           finalContent += chunk.content;
           updateLastMessage({ content: finalContent });
         } else if (chunk.type === 'tool_call') {
+          console.log('Tool call received:', chunk);
           toolCalls.push(chunk);
         }
       }
 
+      console.log('Final content after streaming:', finalContent);
+      console.log('Tool calls found:', toolCalls);
+
       // Handle tool calls if any
       if (toolCalls.length > 0) {
+        console.log('Processing tool calls:', toolCalls);
+        
         for (const toolCall of toolCalls) {
+          console.log('Processing tool call:', toolCall);
+          
           try {
             // Validate tool call
             const validation = toolValidators.validateToolCall(toolCall.name, toolCall.args);
+            console.log('Tool validation result:', validation);
+            
             if (!validation.valid) {
               throw new Error(`Tool validation failed: ${validation.error}`);
             }
@@ -115,12 +188,13 @@ export const useChat = () => {
 
             // Check if tool requires confirmation
             if (tool.requiresConfirm) {
-              // For now, we'll skip tools that require confirmation
+              // For now, we'll execute tools that require confirmation
               // In a full implementation, this would show a ConfirmDialog
-              continue;
+              console.log(`Tool ${toolCall.name} requires confirmation, executing anyway`);
             }
 
             const toolResult = await tool.execute(toolCall.args);
+            console.log(`Tool ${toolCall.name} executed with result:`, toolResult);
 
             // Add tool result message
             const toolMessage = {
@@ -131,32 +205,24 @@ export const useChat = () => {
               timestamp: new Date().toISOString()
             };
             addMessage(toolMessage);
+            console.log('Added tool message:', toolMessage);
 
-            // Run second pass with tool result
-            const secondPassMessages = [
-              ...apiMessages,
-              { role: 'assistant', content: finalContent, tool_calls: toolCalls },
-              { role: 'tool', content: JSON.stringify(toolResult), tool_call_id: toolCall.id }
-            ];
-
-            const secondStream = await client.chat({
-              messages: secondPassMessages,
-              systemPrompt,
-              temperature,
-              toolsCatalog
-            });
-
-            let secondPassContent = '';
-            for await (const chunk of secondStream) {
-              if (chunk.type === 'text') {
-                secondPassContent += chunk.content;
-                updateLastMessage({ content: secondPassContent });
-              }
+            // Generate a natural language response based on the tool result
+            let naturalResponse = '';
+            if (toolCall.name === 'calculate') {
+              naturalResponse = `The calculation result is: ${toolResult.formatted || toolResult.result}`;
+            } else if (toolCall.name === 'get_current_time') {
+              naturalResponse = `The current time is: ${toolResult.formatted || toolResult.currentTime}`;
+            } else {
+              naturalResponse = `I used the ${toolCall.name} tool and got: ${JSON.stringify(toolResult)}`;
             }
 
-            finalContent = secondPassContent;
+            // Update the assistant message with the natural response
+            updateLastMessage({ content: naturalResponse });
+            finalContent = naturalResponse;
 
           } catch (toolError) {
+            console.error('Tool execution error:', toolError);
             setError(`Tool execution failed: ${toolError.message}`);
             break;
           } finally {
@@ -179,16 +245,16 @@ export const useChat = () => {
       } catch {
         // Not a JSON error, use the original message
       }
-      
+
       setError(errorMessage || 'Failed to send message');
-      
+
       // Remove the empty assistant message if there was an error
       if (messages.length > 0 && messages[messages.length - 1].role === 'assistant' && !messages[messages.length - 1].content) {
         // This would require a removeMessage method in the store
         // For now, we'll just update it with an error message
-        updateLastMessage({ 
+        updateLastMessage({
           content: `Error: ${errorMessage}`,
-          error: true 
+          error: true
         });
       }
     } finally {

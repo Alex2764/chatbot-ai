@@ -29,12 +29,14 @@ const useSettingsStore = create(
       // API Configuration
       apiKey: '',
       apiEndpoint: 'https://api.openai.com/v1',
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4o-mini',
       
       // Chat Configuration
-      systemPrompt: 'You are a helpful AI assistant.',
+      systemPrompt: 'You are a helpful AI assistant. When using tools, choose the MOST APPROPRIATE tool for the user\'s request. For time questions, use ONLY get_current_time. For calculations, use ONLY calculate. Never use multiple tools for a single request unless explicitly asked.',
       temperature: 0.7,
       maxTokens: 1000,
+      maxOutputTokens: 1000,
+      topP: 0.9,
       
       // History Settings
       persistHistory: true,
@@ -79,6 +81,16 @@ const useSettingsStore = create(
         set({ maxTokens: Math.max(1, Math.min(4000, tokens)) });
       },
       
+      // Update max output tokens
+      setMaxOutputTokens: (tokens) => {
+        set({ maxOutputTokens: Math.max(1, Math.min(4000, tokens)) });
+      },
+      
+      // Update top P
+      setTopP: (topP) => {
+        set({ topP: Math.max(0, Math.min(1, topP)) });
+      },
+      
       // Toggle history persistence
       togglePersistHistory: () => {
         set((state) => ({ persistHistory: !state.persistHistory }));
@@ -119,10 +131,12 @@ const useSettingsStore = create(
         set({
           apiKey: '',
           apiEndpoint: 'https://api.openai.com/v1',
-          model: 'gpt-3.5-turbo',
+          model: 'gpt-4o-mini',
           systemPrompt: 'You are a helpful AI assistant.',
           temperature: 0.7,
           maxTokens: 1000,
+          maxOutputTokens: 1000,
+          topP: 0.9,
           persistHistory: true,
           maxHistoryItems: 100,
           theme: 'light',
@@ -143,6 +157,8 @@ const useSettingsStore = create(
           systemPrompt: state.systemPrompt,
           temperature: state.temperature,
           maxTokens: state.maxTokens,
+          maxOutputTokens: state.maxOutputTokens,
+          topP: state.topP,
           persistHistory: state.persistHistory,
           maxHistoryItems: state.maxHistoryItems,
           theme: state.theme,
